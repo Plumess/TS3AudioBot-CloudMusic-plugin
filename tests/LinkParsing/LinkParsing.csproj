@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../YunPlugin/YunPlugin.csproj" />
+    <Reference Include="TS3AudioBot"><HintPath>../../YunPlugin/lib/TS3AudioBot.dll</HintPath></Reference>
+    <Reference Include="TSLib"><HintPath>../../YunPlugin/lib/TSLib.dll</HintPath></Reference>
+    <Reference Include="NLog"><HintPath>../../YunPlugin/lib/NLog.dll</HintPath></Reference>
+    <Reference Include="Newtonsoft.Json"><HintPath>../../YunPlugin/lib/Newtonsoft.Json.dll</HintPath></Reference>
+  </ItemGroup>
+</Project>

@@ -11,6 +11,7 @@ using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using TS3AudioBot.CommandSystem;
 using System.Net.Http;
+using System.Web;
 using System.Linq;
 
 namespace YunPlugin.api.netease
@@ -493,36 +494,37 @@ namespace YunPlugin.api.netease
 
         public static string ExtractIdFromAddress(string address)
         {
-            string pattern = @"id=(\d+)";
-            Match match = Regex.Match(address, pattern);
-            if (match.Success)
-            {
-                return match.Groups[1].Value;
-            }
-            else
-            {
-                return address;
-            }
+            if (!Uri.TryCreate(address, UriKind.Absolute, out var uri) ||
+                (uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != Uri.UriSchemeHttp) ||
+                uri.Host != "music.163.com")
+                throw new CommandException("无效的网易云音乐链接", CommandExceptionReason.CommandError);
+
+            var fragmentQuery = uri.Fragment.IndexOf('?');
+            var query = uri.Fragment.StartsWith("#/", StringComparison.Ordinal) && fragmentQuery >= 0
+                ? uri.Fragment.Substring(fragmentQuery + 1)
+                : uri.Query;
+            var id = HttpUtility.ParseQueryString(query).Get("id");
+            if (string.IsNullOrEmpty(id) || !Regex.IsMatch(id, @"^[1-9]\d{0,19}$"))
+                throw new CommandException("网易云音乐链接缺少有效 ID", CommandExceptionReason.CommandError);
+            return id;
         }
 
-        public override MusicApiInputData GetInputData(string data)
+        public override MusicApiInputData GetInputData(string data) => ParseInputData(data);
+
+        public static MusicApiInputData ParseInputData(string data)
         {
             var result = new MusicApiInputData();
-            if (data.Contains("playlist"))
+            if (Uri.TryCreate(data, UriKind.Absolute, out var uri) && uri.Host == "music.163.com")
             {
-                result.Type = MusicUrlType.PlayList;
-                result.Id = ExtractIdFromAddress(data);
-                result.Url = data;
-            }
-            else if (data.Contains("song"))
-            {
-                result.Type = MusicUrlType.Music;
-                result.Id = ExtractIdFromAddress(data);
-                result.Url = data;
-            }
-            else if (data.Contains("album"))
-            {
-                result.Type = MusicUrlType.Album;
+                var path = uri.Fragment.StartsWith("#/", StringComparison.Ordinal)
+                    ? uri.Fragment.Substring(1).Split('?')[0]
+                    : uri.AbsolutePath;
+                path = path.TrimEnd('/');
+                result.Type = path == "/song" ? MusicUrlType.Music :
+                    path == "/playlist" ? MusicUrlType.PlayList :
+                    path == "/album" ? MusicUrlType.Album : MusicUrlType.None;
+                if (result.Type == MusicUrlType.None)
+                    throw new CommandException("不支持的网易云音乐链接类型", CommandExceptionReason.CommandError);
                 result.Id = ExtractIdFromAddress(data);
                 result.Url = data;
             }

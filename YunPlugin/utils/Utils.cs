@@ -129,6 +129,13 @@ public static class Utils
 
     public static string RemoveBBCode(string str)
     {
-        return Regex.Replace(str, @"\[.*?\]", "");
+        str = str.Trim().Replace('\u00a0', ' ').Replace(@"\&", "&").Replace("&amp;", "&");
+        var markdown = Regex.Match(str, @"^\[[^\]]*\]\((https?://.+)\)$", RegexOptions.IgnoreCase);
+        if (markdown.Success)
+            return markdown.Groups[1].Value;
+        var bbcode = Regex.Match(str, @"^\[url=(https?://[^\]]+)\].*\[/url\]$", RegexOptions.IgnoreCase);
+        if (bbcode.Success)
+            return bbcode.Groups[1].Value;
+        return Regex.Replace(str.Trim('<', '>'), @"\[.*?\]", "");
     }
 }
